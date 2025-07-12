@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSocket 服务器</title>
+  <style>
+    button {
+      width: 200px;  /* 按钮宽度 */
+      padding: 10px;  /* 按钮内边距 */
+      margin-bottom: 10px;  /* 设置按钮间的间距 */
+    }
+
+    #startButton, #stopButton {
+      margin-top: 0;  /* 使第二行的按钮不再有上边距 */
+    }
+  </style>
+</head>
+<body>
+  <h1>WebSocket Server</h1>
+  <p>连接数: <span id="webClientsCount">0</span> 网页客户端, <span id="appClientsCount">0</span> 手机APP客户端</p>
+
+  <textarea id="message" rows="4" cols="50" placeholder="请输入jsons数据" >
+    {"type":"error","message":"calibrecamera"}
+  </textarea><br>
+  <button id="sendButton">发送消息</button><br>
+  <button id="startButton">开始拍摄</button>
+  <button id="stopButton">停止拍摄</button>
+  <script>
+    // 创建 WebSocket 连接，'web' 表示网页客户端
+    const ws = new WebSocket('ws://localhost:5000/ws', 'web');
+    const messageInput = document.getElementById('message');
+    const sendButton = document.getElementById('sendButton');
+    const startButton = document.getElementById('startButton');
+    const stopButton = document.getElementById('stopButton');
+    const webClientsCount = document.getElementById('webClientsCount');
+    const appClientsCount = document.getElementById('appClientsCount');
+
+    // WebSocket 连接建立后
+    ws.onopen = () => {
+      console.log('WebSocket 连接已建立');
+    };
+
+    // 接收到来自 APP 客户端的消息
+    ws.onmessage = (event) => {
+      console.log('收到来自 APP 的消息:', event.data);
+    };
+        // 点击发送按钮时
+    startButton.onclick = () => {
+        try {
+          const jsonData = {type:"success"};
+          ws.send(JSON.stringify(jsonData));  // 将 JSON 数据发送到服务器
+          // messageInput.value = '';  // 清空输入框
+        } catch (e) {
+          alert('请输入有效的 JSON 数据');
+        }
+
+    };
+
+    stopButton.onclick = () => {
+      try {
+        const jsonData = {type:"command_message_calibrate"};
+        ws.send(JSON.stringify(jsonData));  // 将 JSON 数据发送到服务器
+        // messageInput.value = '';  // 清空输入框
+      } catch (e) {
+        alert('请输入有效的 JSON 数据');
+      }
+
+    };
+
+
+    // 点击发送按钮时
+    sendButton.onclick = () => {
+      const message = messageInput.value;
+      if (message) {
+        // 发送消息
+        try {
+          // const jsonData = JSON.parse(message);
+          const jsonData = {type:"error",message:"calibrecamera"};
+          ws.send(JSON.stringify(jsonData));  // 将 JSON 数据发送到服务器
+          // messageInput.value = '';  // 清空输入框
+        } catch (e) {
+          alert('请输入有效的 JSON 数据');
+        }
+      }
+    };
+
+    // 定期更新连接数
+    setInterval(() => {
+      fetch('/connections')
+        .then(response => response.json())
+        .then(data => {
+          webClientsCount.textContent = data.webClients;
+          appClientsCount.textContent = data.appClients;
+        });
+    }, 1000);  // 每1秒更新一次连接数
+  </script>
+</body>
+</html>
