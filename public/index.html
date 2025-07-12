@@ -24,6 +24,8 @@
     {"type":"error","message":"calibrecamera"}
   </textarea><br>
   <button id="sendButton">发送消息</button><br>
+  <input id="videoName" type="text" placeholder="请输入视频名称" style="width: 200px; padding: 10px; margin-bottom: 10px;">
+  <br>
   <button id="startButton">开始拍摄</button>
   <button id="stopButton">停止拍摄</button>
   <script>
@@ -45,17 +47,28 @@
     ws.onmessage = (event) => {
       console.log('收到来自 APP 的消息:', event.data);
     };
-        // 点击发送按钮时
-    startButton.onclick = () => {
-        try {
-          const jsonData = {type:"success"};
-          ws.send(JSON.stringify(jsonData));  // 将 JSON 数据发送到服务器
-          // messageInput.value = '';  // 清空输入框
-        } catch (e) {
-          alert('请输入有效的 JSON 数据');
-        }
-
-    };
+        // 点击开始拍摄按钮时
+        startButton.onclick = () => {
+            try {
+              const videoNameInput = document.getElementById('videoName');
+              const videoName = videoNameInput.value.trim();
+          
+              if (!videoName) {
+                alert('请输入视频名称');
+                return;
+              }
+          
+              const jsonData = {
+                type: "success",
+                videoName: videoName
+              };
+          
+              ws.send(JSON.stringify(jsonData));  // 将 JSON 数据发送到服务器
+              console.log('已发送视频名称:', videoName);
+            } catch (e) {
+              alert('发送数据时出错: ' + e.message);
+            }
+        };
 
     stopButton.onclick = () => {
       try {

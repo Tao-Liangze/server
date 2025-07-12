@@ -2,10 +2,18 @@ const express = require('express');
 const WebSocket = require('ws');
 const http = require('http');
 const fs = require('fs');
+const path = require('path');
+
+// 确保videos目录存在
+const videosDir = path.join(__dirname, 'videos');
+if (!fs.existsSync(videosDir)) {
+  fs.mkdirSync(videosDir, { recursive: true });
+  console.log('已创建videos目录:', videosDir);
+}
+
 // 创建 express 应用和 HTTP 服务器
 const app = express();
 const server = http.createServer(app);
-const path = require('path');
 // 创建 WebSocket 服务器
 const wss = new WebSocket.Server({ noServer: true });
 const { Writable } = require('stream');
@@ -15,6 +23,7 @@ let appClients = [];  // 存储手机 APP 客户端的连接
 // 存储每个客户端的视频数据
 
 let clientId = 0;
+let currentVideoName = null; // 存储当前视频名称
 // 处理 WebSocket 连接
 wss.on('connection', (ws, req) => {
   const isWebClient = req.headers['sec-websocket-protocol'] === 'web';  // 判断是网页客户端还是 APP 客户端
@@ -25,9 +34,9 @@ wss.on('connection', (ws, req) => {
     appClients.push(ws);  // 手机 APP 客户端连接
 
     videoDatas = {
-        videoData: [],
-        isRecording: false,
-        outputFile: path.join(__dirname, `output_video_${clientId%10}.mp4`) // 每个客户端的视频保存路径
+      videoData: [],
+      isRecording: false,
+      outputFile: path.join(__dirname, 'videos', currentVideoName ? `${currentVideoName}.mp4` : `output_video_${clientId%10}.mp4`) // 使用用户提供的视频名称或默认名称，保存在videos目录下
     };
     clientId++;
   }
@@ -39,6 +48,12 @@ wss.on('connection', (ws, req) => {
     // console.log('收到消息:',data);
     // 如果是网页客户端，广播消息到所有手机 APP 客户端
     if (isWebClient) {
+      // 如果消息包含视频名称，则保存它
+      if (data.type === "success" && data.videoName) {
+        currentVideoName = data.videoName;
+        console.log('收到视频名称:', currentVideoName);
+      }
+      
       appClients.forEach((appWs) => {
         appWs.send(JSON.stringify(data));
         console.log("send message")
@@ -62,7 +77,9 @@ wss.on('connection', (ws, req) => {
                     return;
                 }
                 videoDatas.isRecording = true;
-                console.log(`视频录制开始：${clientId}`);
+                // 在开始录制时重新设置outputFile路径，使用最新的currentVideoName值
+                videoDatas.outputFile = path.join(__dirname, 'videos', currentVideoName ? `${currentVideoName}.mp4` : `output_video_${clientId%10}.mp4`);
+                console.log(`视频录制开始：${clientId}，输出文件：${videoDatas.outputFile}`);
 
                 // 清空之前的数据，准备新的视频数据
                 videoDatas.videoData = [];
